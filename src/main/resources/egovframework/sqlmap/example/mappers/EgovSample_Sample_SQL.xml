@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="egovframework.example.sample.service.impl.SampleMapper">
+
+	<resultMap id="sample" type="egovframework.example.sample.service.SampleVO">
+		<result property="itemId" column="item_id"/>
+		<result property="itemName" column="item_name"/>
+		<result property="priceOpen" column="price_open"/>
+		<result property="priceHigh" column="price_high"/>
+		<result property="priceLow" column="price_low"/>
+		<result property="priceClose" column="price_close"/>
+		<result property="dealDate" column="deal_date"/>
+		<result property="priceAvg5" column="price_avg5"/>
+		<result property="priceAvg10" column="price_avg10"/>
+		<result property="priceAvg20" column="price_avg20"/>
+		<result property="priceAvg60" column="price_avg60"/>
+		<result property="priceAvg120" column="price_avg_120"/>
+		<result property="volumeAvg5" column="volume_avg5"/>
+		<result property="volumeAvg20" column="volume_avg20"/>
+		<result property="volumeAvg60" column="volume_avg60"/>
+		<result property="volumeAvg120" column="volume_avg120"/>
+		<result property="PPC" column="PPC"/>
+		<result property="PD" column="PD"/>
+		<result property="FR" column="FR"/>
+	</resultMap>
+	
+	
+
+	<insert id="insertSample" parameterType="SampleVO">
+
+			INSERT INTO SAMPLE
+				( ID
+				  , NAME
+				  , DESCRIPTION
+				  , USE_YN
+				  , REG_USER )
+			VALUES ( #{id}
+				  , #{name}
+				  , #{description}
+				  , #{useYn}
+				  , #{regUser} )
+
+	</insert>
+
+	<update id="updateSample">
+
+			UPDATE SAMPLE
+			SET ID=#{id}
+				, NAME=#{name}
+				, DESCRIPTION=#{description}
+				, USE_YN=#{useYn}
+				  WHERE ID=#{id}
+
+	</update>
+
+	<delete id="deleteSample">
+
+			DELETE FROM SAMPLE
+			WHERE ID=#{id}
+
+	</delete>
+
+	<select id="selectSample" resultMap="sample">
+
+		<!-- SELECT 
+		item_id,
+              volume
+		FROM item_price 
+  		WHERE item_id = #{itemId}
+	 	AND date_format(deal_date,'%Y-%m') 
+		BETWEEN date_format(DATE_SUB('20191202',INTERVAL 2 MONTH), '%Y-%m') 
+	 	AND date_format('20191202', '%Y-%m')
+   		ORDER BY deal_date DESC; -->
+
+			SELECT
+				item_id
+				,deal_date
+			FROM 
+				item_price
+			WHERE 1=1
+			AND	item_id=#{itemId}
+			<choose>
+				<when test="dealDate != null and dealDate !=''">
+					AND	deal_date LIKE '%' #{dealDate} '%'
+				</when>
+				<otherwise>
+	              AND   deal_date = '20200131'
+	            </otherwise>
+			</choose>
+
+	</select>
+	
+	<select id="getChart" resultMap="sample">
+	
+		SELECT 
+			a.ranka,
+			a.weeka,
+			a.montha,
+			a.item_id, 
+			a.volume, 
+			a.deal_date, 
+			a.price_close, 
+			a.price_avg5,
+			a.price_avg10,
+			a.price_avg20, 
+			a.price_avg60, 
+			a.price_avg_120,
+			a.volume,
+			a.volume_avg20,
+			a.volume_avg60,
+			a.volume_avg120 
+				FROM (SELECT 
+					item_id, 
+					deal_date, 
+					price_close, 
+					price_avg5,
+					price_avg10,
+					price_avg20, 
+					price_avg60, 
+					price_avg_120,
+					volume,
+					volume_avg20,
+					volume_avg60,
+					volume_avg120,
+					RANK() over (partition by item_id ORDER BY deal_date desc) as ranka,
+					week(deal_date)as weeka,
+					month(deal_date)as montha
+		FROM item_price 
+		WHERE item_id = #{itemId}
+			AND date_format(deal_date,'%Y-%m-%d') 
+			BETWEEN date_format(DATE_ADD(#{dealDate}, INTERVAL -3 month), '%Y-%m-%d') 
+			AND date_format(#{dealDate}, '%Y-%m-%d') 
+		ORDER BY deal_date desc ) a
+			<if test="calender == 'bbb'">
+				group by weeka
+			</if>
+			<if test="calender == 'ccc'">
+				group by montha
+			</if>
+		order by deal_date desc
+	</select>
+ 
+	<select id="selectSampleAvg" parameterType="searchVO"  resultMap="sample">
+		select 
+				item_id
+				, deal_date
+		        , price_close
+		        , ROUND((CASE
+		        WHEN
+					5 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(price_close))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)
+				END), 2) AS priceAvg5
+		        , ROUND((CASE
+		        WHEN
+					10 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(price_close))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 9 PRECEDING AND CURRENT ROW)
+				END), 2) AS priceAvg10
+		        , ROUND((CASE
+		        WHEN
+					20 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(price_close))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+				END), 2) AS priceAvg20
+		        , ROUND((CASE
+		        WHEN
+					60 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 59 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(price_close))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 59 PRECEDING AND CURRENT ROW)
+				END), 2) AS priceAvg60
+		        , volume
+		        , ROUND((CASE
+		        WHEN
+					5 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(volume))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 4 PRECEDING AND CURRENT ROW)
+				END), 2) AS volumeAvg5
+		        , ROUND((CASE
+		        WHEN
+					20 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(volume))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 19 PRECEDING AND CURRENT ROW)
+				END), 2) AS volumeAvg20
+		        , ROUND((CASE
+		        WHEN
+					60 = COUNT(*)
+		            OVER (ORDER BY deal_date ROWS BETWEEN 59 PRECEDING AND CURRENT ROW)
+				THEN
+					AVG(SUM(volume))
+		            OVER (ORDER BY deal_date ROWS BETWEEN 59 PRECEDING AND CURRENT ROW)
+				END), 2) AS volumeAvg60
+		FROM item_price
+		WHERE item_id = #{itemId} 
+		
+		<!-- 텍스트로 된 건 굳이 형변환 할 필요 없음 -->
+		AND date_format(deal_date,'%Y-%m-%d')
+	         BETWEEN date_format(DATE_ADD(#{dealDate},INTERVAL  -3 year), '%Y-%m-%d')
+	    AND date_format(#{dealDate},'%Y-%m-%d')
+		
+		group by deal_date, price_close
+		order by deal_date DESC
+		LIMIT 10
+	</select> 
+	
+	<select id="dataTableList" parameterType="searchVO"  resultMap="sample">
+			SELECT item_id,
+			   item_name,
+			   deal_date,
+			   price_open,
+			   price_high,
+			   price_low,
+			   price_close,
+			   volume,
+			   PPC,
+			   PD,
+  			   ROUND(((price_close-PPC) / PPC *100),2) as FR 
+  			   FROM( SELECT 
+					   A.item_id,
+					   A.item_name,
+					   B.deal_date,
+					   B.price_open,
+					   B.price_high,
+					   B.price_low,
+					   B.price_close,
+					   B.volume,
+					   lag(B.price_close,1) over(partition by A.item_id order by B.deal_date) as PPC,
+		  			   B.price_close-lag(B.price_close,1) over(partition by A.item_id order by B.deal_date) as PD
+					FROM 
+						item A
+					INNER JOIN 
+						item_price B
+					ON 
+						A.item_id = B.item_id
+				) T1
+			WHERE 1=1
+					<choose>
+						<when test="searchRegDate != null and searchRegDate !=''">
+							AND	deal_date LIKE '%'  '%'
+						</when>
+						<otherwise>
+			              AND   deal_date = '20200131'
+			            </otherwise>
+					</choose>
+			ORDER BY deal_date, item_id ASC
+			<!-- LIMIT 20 -->
+			<!-- LIMIT #{recordCountPerPage} OFFSET #{firstIndex}  -->
+	</select>
+
+	<select id="selectSampleList" parameterType="searchVO"  resultMap="sample">
+			SELECT item_id,
+			   item_name,
+			   deal_date,
+			   price_open,
+			   price_high,
+			   price_low,
+			   price_close,
+			   volume,
+			   PPC,
+			   PD,
+  			   ROUND(((price_close-PPC) / PPC *100),2) as FR 
+  			   FROM( SELECT 
+					   A.item_id, 
+					   A.item_name,
+					   B.deal_date,
+					   B.price_open,
+					   B.price_high,
+					   B.price_low,
+					   B.price_close,
+					   B.volume,
+					   lag(B.price_close,1) over(partition by A.item_id order by B.deal_date) as PPC,
+		  			   B.price_close-lag(B.price_close,1) over(partition by A.item_id order by B.deal_date) as PD
+					FROM 
+						item A
+					INNER JOIN 
+						item_price B
+					ON 
+						A.item_id = B.item_id
+				) T1
+				WHERE 1=1
+					<choose>
+						<when test="searchRegDate != null and searchRegDate !=''">
+							AND	deal_date LIKE '%' #{searchRegDate} '%'
+						</when>
+						<otherwise>
+			              AND   deal_date = '20200131'
+			            </otherwise>
+					</choose>
+					<choose>
+						<when test='searchCode != null and searchCode != ""'>
+			            	AND (item_id LIKE '%' #{searchCode} '%' OR item_name LIKE '%' #{searchCode} '%')
+			            </when>
+			        </choose>
+					ORDER BY deal_date, item_id ASC
+					LIMIT #{recordCountPerPage} OFFSET #{firstIndex} 
+	</select>
+
+	<select id="selectSampleListTotCnt" parameterType="searchVO" resultType="int">
+			
+			SELECT COUNT(*) totcnt
+			FROM 
+				item A
+			INNER JOIN 
+				item_price B
+			ON 
+				A.item_id = B.item_id
+			WHERE 1=1
+			<choose>
+				<when test="searchRegDate != null and searchRegDate !=''">
+					AND	B.deal_date LIKE '%' #{searchRegDate} '%'
+				</when>
+				<otherwise>
+	              AND   B.deal_date = '20200131'
+	            </otherwise>
+			</choose>
+			<choose>
+				<when test='searchCode != null and searchCode != ""'>
+            		AND (A.item_id LIKE '%' #{searchCode} '%' OR A.item_name LIKE '%' #{searchCode} '%')
+            	</when>
+           	</choose>
+	</select>
+
+</mapper>

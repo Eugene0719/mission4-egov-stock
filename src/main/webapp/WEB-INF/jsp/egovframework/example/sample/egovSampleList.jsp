@@ -351,7 +351,7 @@
         	<table border="0" cellspacing="5" cellpadding="5">
 		        <tbody>
 		        
-		    <div id="search">
+		   <%--  <div id="search">
         		거래일<input name="searchRegDate" cssClass="txt"/>
         		<ul>
         			<li>
@@ -361,7 +361,7 @@
 	      	            </span>
       	            </li>
       	        </ul>
-        	</div>
+        	</div> --%>
         	
 		        	<!-- <tr>
 			            <td>날짜 검색 : </td>
